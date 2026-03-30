@@ -27,4 +27,38 @@ function getFraudStats() {
   };
 }
 
-module.exports = { logFraudEvent, getFraudStats };
+function assessVoteRisk(identity, electionId, nullifierHash) {
+  if (!identity) {
+    return {
+      blocked: true,
+      reason: "No verified identity linked to this voting token",
+      riskScore: 95
+    };
+  }
+
+  const suspiciousLog = store.fraudLogs.find(
+    (log) => log.userId === identity.userId && log.riskScore >= 85
+  );
+  if (suspiciousLog) {
+    return {
+      blocked: true,
+      reason: "Identity is flagged as suspicious",
+      riskScore: suspiciousLog.riskScore
+    };
+  }
+
+  const duplicateVote = store.votes.find(
+    (vote) => vote.electionId === electionId && vote.nullifierHash === nullifierHash
+  );
+  if (duplicateVote) {
+    return {
+      blocked: true,
+      reason: "Voting token already consumed",
+      riskScore: 99
+    };
+  }
+
+  return { blocked: false, reason: "clear", riskScore: 0 };
+}
+
+module.exports = { logFraudEvent, getFraudStats, assessVoteRisk };

@@ -1,8 +1,9 @@
 const Vote = require("../models/Vote");
 const { store } = require("../models/store");
-const { buildVoteSubmission } = require("../services/blockchain.service");
+const { buildVoteSubmission, submitVoteOnChain } = require("../services/blockchain.service");
 const { createReceiptHash } = require("../services/hash.service");
-const { generateProof, verifyProof } = require("../services/proof.service");
+const { generateProof, verifyProof, markVotingTokenConsumed } = require("../services/proof.service");
+const { assessVoteRisk, logFraudEvent } = require("../services/fraud.service");
 const { ensureFields } = require("../utils/validator");
 
 function getElectionHandler(req, res, next) {
@@ -20,16 +21,16 @@ function getElectionHandler(req, res, next) {
 
 function generateProofHandler(req, res, next) {
   try {
-    ensureFields(req.body, ["did", "electionId"]);
-    res.json(generateProof(req.body.did, req.body.electionId));
+    ensureFields(req.body, ["votingToken", "electionId"]);
+    res.json(generateProof(req.body.votingToken, req.body.electionId));
   } catch (error) {
     next(error);
   }
 }
 
-function submitVoteHandler(req, res, next) {
+async function submitVoteHandler(req, res, next) {
   try {
-    ensureFields(req.body, ["did", "electionId", "candidateId", "nullifierHash", "proof"]);
+    ensureFields(req.body, ["electionId", "candidateId", "nullifierHash", "proof"]);
 
     const election = store.elections.find((item) => item._id === req.body.electionId && item.isActive);
     if (!election) {
@@ -41,6 +42,15 @@ function submitVoteHandler(req, res, next) {
       return res.status(400).json({ success: false, message: "Invalid proof or nullifier already used" });
     }
 
+    const riskAssessment = assessVoteRisk(verification.identity, req.body.electionId, req.body.nullifierHash);
+    if (riskAssessment.blocked) {
+      logFraudEvent("vote_blocked", verification.identity?.userId || "unknown", {
+        reason: riskAssessment.reason,
+        electionId: req.body.electionId
+      }, riskAssessment.riskScore);
+      return res.status(403).json({ success: false, message: riskAssessment.reason });
+    }
+
     const timestamp = new Date().toISOString();
     const receiptHash = createReceiptHash(
       req.body.electionId,
@@ -48,6 +58,12 @@ function submitVoteHandler(req, res, next) {
       req.body.nullifierHash,
       timestamp
     );
+    const blockchain = await submitVoteOnChain({
+      electionId: req.body.electionId,
+      candidateId: req.body.candidateId,
+      nullifierHash: req.body.nullifierHash,
+      receiptHash
+    });
 
     const vote = new Vote({
       _id: `vote_${store.votes.length + 1}`,
@@ -55,15 +71,17 @@ function submitVoteHandler(req, res, next) {
       candidateId: req.body.candidateId,
       nullifierHash: req.body.nullifierHash,
       receiptHash,
-      txHash: `0xtx${Date.now().toString(16)}`,
+      txHash: blockchain.txHash || `0xtx${Date.now().toString(16)}`,
       timestamp
     });
 
     store.votes.push(vote);
+    markVotingTokenConsumed(verification.identity._id, req.body.electionId, req.body.nullifierHash);
 
     return res.status(201).json({
       success: true,
       vote,
+      blockchain,
       blockchainPayload: buildVoteSubmission(
         req.body.electionId,
         req.body.candidateId,

@@ -9,6 +9,7 @@ contract ElectionManager {
     }
 
     mapping(uint256 => Election) public elections;
+    mapping(bytes32 => bool) public usedNullifiers;
     uint256 public electionCount;
 
     event ElectionCreated(uint256 indexed electionId, string title, uint256 timestamp);
@@ -29,11 +30,14 @@ contract ElectionManager {
 
     function submitVote(
         uint256 electionId,
-        bytes32 candidateHash,
+        string calldata candidateId,
         bytes32 nullifierHash,
         bytes32 receiptHash
     ) external {
         require(elections[electionId].active, "Election not active");
+        require(!usedNullifiers[nullifierHash], "Nullifier already used");
+        usedNullifiers[nullifierHash] = true;
+        bytes32 candidateHash = keccak256(abi.encodePacked(candidateId));
         emit VoteSubmitted(electionId, candidateHash, nullifierHash, receiptHash, msg.sender, block.timestamp);
     }
 }

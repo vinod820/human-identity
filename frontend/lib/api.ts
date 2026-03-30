@@ -39,8 +39,8 @@ export async function getElection(id: string) {
   return data;
 }
 
-export async function generateProof(did: string, electionId: string) {
-  const { data } = await api.post("/vote/generate-proof", { did, electionId });
+export async function generateProof(votingToken: string, electionId: string) {
+  const { data } = await api.post("/vote/generate-proof", { votingToken, electionId });
   return data;
 }
 
