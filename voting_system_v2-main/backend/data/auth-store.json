@@ -1,0 +1,33 @@
+{
+  "accounts": [
+    {
+      "id": "f6f4df8c-1cdf-41bb-b33e-876428bc9ff7",
+      "fullName": "Ravik Demo",
+      "email": "auth.20260329194749@civicproof.test",
+      "phone": "+91 98765 43210",
+      "passwordHash": "48c727d8d00c9caffbf462ce70b2bd63625032a2c756f2aba04ce6243e7e29faa4c7dca411c78ce826a793bd32e003cc51db84912f969994703a5a1b0cf3cbc5",
+      "passwordSalt": "2d47182736fd6dcd4ea026df1c6902c8",
+      "createdAt": "2026-03-29T14:17:50.056Z",
+      "lastLoginAt": "2026-03-29T14:17:50.306Z"
+    },
+    {
+      "id": "83b2d7f3-7393-4317-8644-d555eb7dfffe",
+      "fullName": "Ravik Test",
+      "email": "walletfix.1774804399@civicproof.test",
+      "phone": "+91 98765 43210",
+      "passwordHash": "41229b87866f6a9b1815c0233ce33ff78bed1c5a0579fa992d93b512beba689450cc1f3dbdbef14391052d3aee31beefca6985b114f45cfbc1c054135d9de01b",
+      "passwordSalt": "bcbc86e7b0defab650f0ae4fb95b956a",
+      "createdAt": "2026-03-29T17:13:20.327Z",
+      "lastLoginAt": "2026-03-29T17:13:20.862Z"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "0188712b-0edd-43c2-b787-674c180afea2",
+      "token": "548cfb43fc0371bd7b3625dea71b5559de8dbd3d837669ccfa9ab2fa65d7c0bd",
+      "accountId": "83b2d7f3-7393-4317-8644-d555eb7dfffe",
+      "createdAt": "2026-03-29T17:13:20.862Z",
+      "expiresAt": "2026-04-28T17:13:20.862Z"
+    }
+  ]
+}
