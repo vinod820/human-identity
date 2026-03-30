@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { IdentityCard } from "@/components/IdentityCard";
 import { loadState, saveState } from "@/lib/storage";
-import { buildIdentityTx } from "@/lib/web3";
+import { buildIdentityTx, registerIdentityOnChain } from "@/lib/web3";
 
 export default function IdentityPage() {
   const [state, setState] = useState(loadState());
@@ -29,10 +29,16 @@ export default function IdentityPage() {
           className="primary"
           type="button"
           onClick={async () => {
-            const payload = await buildIdentityTx(state.identityCommitment);
-            const syntheticTx = `0xidentity${Date.now().toString(16)}`;
-            saveState({ txHash: syntheticTx });
-            setTx(JSON.stringify({ ...payload, txHash: syntheticTx }, null, 2));
+            try {
+              const txHash = await registerIdentityOnChain(state.identityCommitment);
+              saveState({ txHash });
+              setTx(JSON.stringify({ mode: "onchain", txHash }, null, 2));
+            } catch (error) {
+              const payload = await buildIdentityTx(state.identityCommitment);
+              const syntheticTx = `0xidentity${Date.now().toString(16)}`;
+              saveState({ txHash: syntheticTx });
+              setTx(JSON.stringify({ mode: "simulated", ...payload, txHash: syntheticTx, error: String(error) }, null, 2));
+            }
           }}
         >
           Register on Blockchain

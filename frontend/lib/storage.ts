@@ -5,6 +5,7 @@ export type RegistrationState = {
   phoneHash: string;
   did: string;
   identityCommitment: string;
+  votingToken: string;
   txHash: string;
   receiptHash: string;
   nullifierHash: string;
@@ -39,6 +40,7 @@ function emptyState(): RegistrationState {
     phoneHash: "",
     did: "",
     identityCommitment: "",
+    votingToken: "",
     txHash: "",
     receiptHash: "",
     nullifierHash: "",

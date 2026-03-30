@@ -5,9 +5,10 @@ import Link from "next/link";
 import { VoteCard, type Candidate } from "@/components/VoteCard";
 import { generateProof, getElection, submitVote } from "@/lib/api";
 import { loadState, saveState } from "@/lib/storage";
+import { submitVoteOnChain } from "@/lib/web3";
 
 export default function VotePage() {
-  const [did, setDid] = useState("");
+  const [votingToken, setVotingToken] = useState("");
   const [title, setTitle] = useState("Loading election...");
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [selectedCandidate, setSelectedCandidate] = useState("");
@@ -15,7 +16,7 @@ export default function VotePage() {
 
   useEffect(() => {
     const state = loadState();
-    setDid(state.did);
+    setVotingToken(state.votingToken);
 
     getElection("e1").then((election) => {
       setTitle(election.title);
@@ -31,22 +32,38 @@ export default function VotePage() {
         selectedCandidate={selectedCandidate}
         onSelect={setSelectedCandidate}
         onSubmit={async () => {
-          const proofPayload = await generateProof(did, "e1");
+          if (!votingToken) {
+            setMessage("No active voting token found. Complete identity verification first.");
+            return;
+          }
+          const proofPayload = await generateProof(votingToken, "e1");
           const data = await submitVote({
-            did,
             electionId: "e1",
             candidateId: selectedCandidate,
             nullifierHash: proofPayload.nullifierHash,
             proof: proofPayload.proof
           });
 
+          let walletTxHash = "";
+          try {
+            walletTxHash = await submitVoteOnChain(
+              "e1",
+              selectedCandidate,
+              data.vote.nullifierHash,
+              data.vote.receiptHash
+            );
+          } catch (error) {
+            console.warn("Wallet vote tx fallback", error);
+          }
+
           saveState({
             nullifierHash: data.vote.nullifierHash,
             receiptHash: data.vote.receiptHash,
-            txHash: data.vote.txHash,
+            txHash: walletTxHash || data.vote.txHash,
             timestamp: data.vote.timestamp
           });
-          setMessage("Vote submitted successfully. The nullifier is now consumed for this election.");
+          saveState({ votingToken: "" });
+          setMessage("Vote submitted successfully. The token is now consumed and cannot be reused.");
         }}
       />
       <section className="panel">

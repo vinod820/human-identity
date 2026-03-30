@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { OtpForm } from "@/components/OtpForm";
-import { createDid, checkDuplicate, registerIdentity, sendOtp, verifyOtp } from "@/lib/api";
+import { checkDuplicate, registerIdentity, sendOtp, verifyOtp } from "@/lib/api";
 import { loadState, saveState } from "@/lib/storage";
 
 export default function VerifyPhonePage() {
@@ -39,26 +39,26 @@ export default function VerifyPhonePage() {
             return;
           }
 
-          const didResponse = await createDid(state.faceHash, verified.phoneHash);
-          await registerIdentity({
-            did: didResponse.did,
+          const registration = await registerIdentity({
             faceHash: state.faceHash,
             phoneHash: verified.phoneHash,
-            identityCommitment: didResponse.identityCommitment,
+            identityCommitment: "",
             biometricCommitment: state.biometricCommitment,
             faceDescriptor: state.faceDescriptor
           });
 
           saveState({
             phoneHash: verified.phoneHash,
-            did: didResponse.did,
-            identityCommitment: didResponse.identityCommitment
+            did: registration.did,
+            identityCommitment: registration.identityCommitment,
+            votingToken: registration.votingTokens?.[0]?.token || "",
+            txHash: registration.blockchain?.txHash || ""
           });
 
           setPhoneHash(verified.phoneHash);
-          setDid(didResponse.did);
-          setIdentityCommitment(didResponse.identityCommitment);
-          setMessage("Phone verified, DID created, and identity registered off-chain.");
+          setDid(registration.did);
+          setIdentityCommitment(registration.identityCommitment);
+          setMessage("Phone verified, DID issued, token generated, and identity registered.");
         }}
       />
       <p>{message}</p>
